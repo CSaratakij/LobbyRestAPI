@@ -39,7 +39,7 @@ let data = {
     lobby: {}
 };
 
-let secretKey = {};
+let token = {};
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -70,13 +70,13 @@ function addLobby(info) {
     info.createDate = date.toISOString();
     info.pingDate = info.createDate;
 
-    secretKey[id] = uid(maxUIDLength);
+    token[id] = uid(maxUIDLength);
 
     data.lobby[info.id] = info;
     data.total = Object.keys(data.lobby).length;
 
     // console.log(info);
-    // console.log("secret : " + secretKey[id]);
+    // console.log("secret : " + token[id]);
 
     return info.id;
 }
@@ -95,7 +95,7 @@ function updateLobby(info) {
 }
 
 function removeLobby(id) {
-    delete secretKey[id];
+    delete token[id];
     delete data.lobby[id];
 
     let temp = data.total - 1;
@@ -157,8 +157,8 @@ function forbiddenRespond(res) {
 }
 
 function isKeyMatch(id, key) {
-    if (secretKey[id] == undefined) throw "Key not exists";
-    if (secretKey[id] == key) return true;
+    if (token[id] == undefined) throw "Key not exists";
+    if (token[id] == key) return true;
     return false;
 }
 
@@ -231,7 +231,7 @@ app.post(
             let id = addLobby(info);
             let result = {
                 id: id,
-                secretKey: secretKey[id]
+                token: token[id]
             };
             res.status(201);
             res.json(result);
@@ -242,49 +242,45 @@ app.post(
 );
 
 //update specific lobby info
-app.put(
-    "/lobby",
-    [body("id").exists(), body("secretKey").exists()],
-    (req, res) => {
+app.put("/lobby", [body("id").exists(), body("token").exists()], (req, res) => {
+    try {
+        validationResult(req).throw();
+
+        let id = req.body.id;
+        let isMatch = false;
+
         try {
-            validationResult(req).throw();
-
-            let id = req.body.id;
-            let isMatch = false;
-
-            try {
-                isMatch = isKeyMatch(id, req.body.secretKey);
-            } catch (err) {
-                lobbyNotFoundRespond(res);
-                return;
-            }
-
-            if (isMatch) {
-                let info = {};
-
-                for (var key in LobbyKeySchema) {
-                    if (req.body.hasOwnProperty(key)) {
-                        info[key] = req.body[key];
-                    }
-                }
-
-                let result = updateLobby(info);
-
-                res.status(201);
-                res.json(result);
-            } else {
-                forbiddenRespond(res);
-            }
+            isMatch = isKeyMatch(id, req.body.token);
         } catch (err) {
-            incorrectBodyParameterRespond(res);
+            lobbyNotFoundRespond(res);
+            return;
         }
+
+        if (isMatch) {
+            let info = {};
+
+            for (var key in LobbyKeySchema) {
+                if (req.body.hasOwnProperty(key)) {
+                    info[key] = req.body[key];
+                }
+            }
+
+            let result = updateLobby(info);
+
+            res.status(201);
+            res.json(result);
+        } else {
+            forbiddenRespond(res);
+        }
+    } catch (err) {
+        incorrectBodyParameterRespond(res);
     }
-);
+});
 
 //delete specific lobby
 app.delete(
     "/lobby",
-    [body("id").exists(), body("secretKey").exists()],
+    [body("id").exists(), body("token").exists()],
     (req, res) => {
         try {
             validationResult(req).throw();
@@ -293,7 +289,7 @@ app.delete(
             let isMatch = false;
 
             try {
-                isMatch = isKeyMatch(id, req.body.secretKey);
+                isMatch = isKeyMatch(id, req.body.token);
             } catch (err) {
                 lobbyNotFoundRespond(res);
                 return;
