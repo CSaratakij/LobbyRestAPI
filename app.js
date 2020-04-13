@@ -2,7 +2,7 @@
 //  Initialize
 //------------------------------
 
-const _DEBUG = true;
+const _DEBUG = false;
 
 const express = require("express");
 const bodyParser = require("body-parser");
@@ -102,7 +102,7 @@ function updateLobby(info) {
         lobby: data.lobby[id]
     };
 
-    io.emit("update-lobby", { lobby: result.lobby });
+    io.emit("update-lobby", data.lobby[id]);
     return result;
 }
 

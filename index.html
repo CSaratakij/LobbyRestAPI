@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <head>
         <title>MyGameLobby</title>
         <link rel="stylesheet" type="text/css" href="css/theme.css">
@@ -12,9 +13,11 @@
         <div id=app>
             <div class="center">
                 <h1>{{ title }}</h1>
-                <h3>live at : {{ viewData.createDate }}</h3>
+                <!-- <h3>live at : {{ viewData.createDate }}</h3> -->
+                <h3>live at : {{ localeDate() }}</h3>
                 <h4>Total game : {{ viewData.total }}</h4>
             </div>
+            <hr class="solid"></hr>
             <div v-if="viewData.total > 0">
                 <ol>
                     <li v-for="(item, index) in viewData.lobby">
@@ -23,7 +26,7 @@
                             <p>IP : {{ item.ip }}</p>
                             <p>Port : {{ item.port }}</p>
                             <p>Player : {{ item.player }} / {{ item.maxPlayer }}</p>
-                        <div>
+                        </div>
                     </li>
                 </ol>
             </div>

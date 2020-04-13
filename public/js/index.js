@@ -12,15 +12,22 @@ function initialize() {
     viewData = {};
     socket = io();
 
+    fetchGameLobby();
+
     app = new Vue({
         el: "#app",
         data: {
             title: "Game Lobby",
             viewData: {}
+        },
+        methods: {
+            localeDate: function() {
+                if (viewData.createDate == undefined) return "";
+                let date = new Date(viewData.createDate);
+                return date.toLocaleString();
+            }
         }
     });
-
-    fetchGameLobby();
 }
 
 function fetchGameLobby() {
@@ -71,10 +78,13 @@ function subscribe() {
     socket.on("update-lobby", data => {
         let id = data.id;
 
-        viewData.lobby[id] = data;
+        let newData = {};
+        newData[id] = data;
+
+        viewData.lobby = Object.assign({}, viewData.lobby, newData);
         updateView(viewData);
 
-        // console.log("Receive update lobby event... : " + JSON.stringify(data));
+        // console.log("Receive update lobby event... : " + JSON.stringify(app.viewData));
     });
 
     socket.on("remove-lobby", data => {

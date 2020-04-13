@@ -3,6 +3,9 @@ body {
     color: white;
 }
 
+hr.solid {
+    border-top: 3px solid #bbb;
+}
 .center {
     text-align: center;
 }
