@@ -15,6 +15,7 @@
     "express-validator": "^6.4.0",
     "mongoose": "^5.9.7",
     "nodemon": "^2.0.3",
+    "pug": "^2.0.4",
     "socket.io": "^2.3.0",
     "uid": "^1.0.0"
   }

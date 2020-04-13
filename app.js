@@ -2,6 +2,8 @@
 //  Initialize
 //------------------------------
 
+const _DEBUG = true;
+
 const express = require("express");
 const bodyParser = require("body-parser");
 const uid = require("uid");
@@ -25,12 +27,14 @@ const LobbyKeySchema = {
     pingDate: ""
 };
 
-const port = 3000;
+const port = 8080;
 const maxUIDLength = 32;
 
 const checkAliveInterval = 1000 * 60 * 2;
 
 let app = express();
+let server = require("http").createServer(app);
+let io = require("socket.io")(server);
 let date = new Date();
 
 let data = {
@@ -43,6 +47,7 @@ let token = {};
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
+app.use(express.static("public"));
 
 //------------------------------
 //  Request handler
@@ -78,6 +83,7 @@ function addLobby(info) {
     // console.log(info);
     // console.log("secret : " + token[id]);
 
+    io.emit("add-lobby", info);
     return info.id;
 }
 
@@ -91,7 +97,13 @@ function updateLobby(info) {
         }
     }
 
-    return { total: 1, lobby: data.lobby[id] };
+    let result = {
+        total: 1,
+        lobby: data.lobby[id]
+    };
+
+    io.emit("update-lobby", { lobby: result.lobby });
+    return result;
 }
 
 function removeLobby(id) {
@@ -102,6 +114,7 @@ function removeLobby(id) {
     if (temp < 0) temp = 0;
 
     data.total = temp;
+    io.emit("remove-lobby", id);
 }
 
 function lobbyNotFoundRespond(res) {
@@ -161,6 +174,11 @@ function isKeyMatch(id, key) {
     if (token[id] == key) return true;
     return false;
 }
+
+//serve homepage
+app.get("/", (req, res) => {
+    res.sendFile(__dirname + "/index.html");
+});
 
 //ping specific lobby (keep entry of lobby from delete schedule)
 app.get("/lobby/ping", [query("id").exists()], (req, res) => {
@@ -313,19 +331,37 @@ app.delete(
 //------------------------------
 
 //set timer to check if we should drop specific lobby entry
-setInterval(() => {
-    let currentDate = new Date();
-    for (var key in data.lobby) {
-        let pingDate = new Date(data.lobby[key].pingDate);
-        let diff = currentDate - pingDate;
+if (!_DEBUG) {
+    setInterval(() => {
+        let currentDate = new Date();
+        for (var key in data.lobby) {
+            let pingDate = new Date(data.lobby[key].pingDate);
+            let diff = currentDate - pingDate;
 
-        if (diff >= checkAliveInterval) {
-            removeLobby(key);
+            if (diff >= checkAliveInterval) {
+                removeLobby(key);
+            }
         }
-    }
-}, checkAliveInterval);
+    }, checkAliveInterval);
+}
+
+//------------------------------
+//  Web socket handler
+//------------------------------
+io.on("connection", socket => {
+    console.log("a user connected");
+    socket.emit("ping-respond", { createDate: data.createDate });
+
+    socket.on("ping", () => {
+        socket.emit("ping-respond", { createDate: data.createDate });
+    });
+
+    socket.on("disconnect", () => {
+        socket.disconnect();
+    });
+});
 
 //start server
-app.listen(port, () => {
+server.listen(port, () => {
     console.log("Server start at port : " + port);
 });

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>MyGameLobby</title>
+        <link rel="stylesheet" type="text/css" href="css/theme.css">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
+        <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.11/vue.js"></script> -->
+        <script src="js/vue.min.js"></script>
+        <script src="js/index.js"></script>
+    </head>
+    <body>
+        <div id=app>
+            <div class="center">
+                <h1>{{ title }}</h1>
+                <h3>live at : {{ viewData.createDate }}</h3>
+                <h4>Total game : {{ viewData.total }}</h4>
+            </div>
+            <div v-if="viewData.total > 0">
+                <ol>
+                    <li v-for="(item, index) in viewData.lobby">
+                        <div>
+                            <h4> {{ item.title }} </h4>
+                            <p>IP : {{ item.ip }}</p>
+                            <p>Port : {{ item.port }}</p>
+                            <p>Player : {{ item.player }} / {{ item.maxPlayer }}</p>
+                        <div>
+                    </li>
+                </ol>
+            </div>
+            </div>
+        </div>
+    </body>
+</html>
