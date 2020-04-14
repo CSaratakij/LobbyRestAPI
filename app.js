@@ -9,7 +9,6 @@ const bodyParser = require("body-parser");
 const uid = require("uid");
 const mongoose = require("mongoose");
 const {
-    check,
     body,
     query,
     oneOf,
@@ -27,6 +26,7 @@ const LobbyKeySchema = {
     pingDate: ""
 };
 
+const ip = "0.0.0.0";
 const port = 8080;
 const maxUIDLength = 32;
 
@@ -45,7 +45,7 @@ let data = {
 
 let token = {};
 
-app.use(bodyParser.json());
+app.use(bodyParser.json({ strict: false }));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static("public"));
 
@@ -97,6 +97,9 @@ function updateLobby(info) {
         }
     }
 
+    let now = new Date();
+    data.lobby[id].pingDate = now.toISOString();
+
     let result = {
         total: 1,
         lobby: data.lobby[id]
@@ -114,7 +117,7 @@ function removeLobby(id) {
     if (temp < 0) temp = 0;
 
     data.total = temp;
-    io.emit("remove-lobby", id);
+    io.emit("remove-lobby", { id: id });
 }
 
 function lobbyNotFoundRespond(res) {
@@ -174,6 +177,13 @@ function isKeyMatch(id, key) {
     if (token[id] == key) return true;
     return false;
 }
+
+// app.get("/ip", (req, res) => {
+//     let result = {
+//         ip: req.ip
+//     }
+//     res.json(result);
+// });
 
 //serve homepage
 app.get("/", (req, res) => {
@@ -291,6 +301,7 @@ app.put("/lobby", [body("id").exists(), body("token").exists()], (req, res) => {
             forbiddenRespond(res);
         }
     } catch (err) {
+        console.log(err);
         incorrectBodyParameterRespond(res);
     }
 });
@@ -361,7 +372,6 @@ io.on("connection", socket => {
     });
 });
 
-//start server
-server.listen(port, () => {
+server.listen(port, ip, () => {
     console.log("Server start at port : " + port);
 });

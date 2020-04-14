@@ -1,5 +1,10 @@
 let app;
-let viewData;
+let store = {
+    title: "Game Lobby",
+    total: 0,
+    createDate: "",
+    lobby: []
+}
 let socket;
 let isDisconnectOnce = false;
 
@@ -9,22 +14,24 @@ window.addEventListener("load", () => {
 });
 
 function initialize() {
-    viewData = {};
     socket = io();
-
     fetchGameLobby();
 
     app = new Vue({
         el: "#app",
-        data: {
-            title: "Game Lobby",
-            viewData: {}
-        },
+        data: store,
         methods: {
+            reRender: function() {
+                this.forceUpdate();
+            },
             localeDate: function() {
-                if (viewData.createDate == undefined) return "";
-                let date = new Date(viewData.createDate);
+                if (this.createDate == undefined) return "";
+                let date = new Date(this.createDate);
                 return date.toLocaleString();
+            },
+            removeLobby: function(id) {
+                Vue.delete(this.lobby, id);
+                this.total -= 1;
             }
         }
     });
@@ -41,7 +48,7 @@ function fetchGameLobby() {
                 return;
             }
             response.json().then(data => {
-                updateView(data);
+                updateStore(data);
             });
         })
         .catch(err => {
@@ -54,7 +61,7 @@ function subscribe() {
         if (!isDisconnectOnce) return;
         if (data.createDate == undefined) return;
 
-        let isMiss = isCacheMiss(viewData.createDate, data.createDate);
+        let isMiss = isCacheMiss(store.createDate, data.createDate);
         // console.log("Cache miss : " + isMiss);
 
         if (isMiss) {
@@ -66,34 +73,35 @@ function subscribe() {
     });
 
     socket.on("add-lobby", data => {
-        let id = data.id;
+        store.lobby.push(data);
+        store.total += 1;
 
-        viewData.lobby[id] = data;
-        viewData.total += 1;
-
-        updateView(viewData);
         // console.log("Receive add lobby event... : " + JSON.stringify(data));
     });
 
     socket.on("update-lobby", data => {
         let id = data.id;
+        let index = store.lobby.findIndex(element => id == element.id);
 
-        let newData = {};
-        newData[id] = data;
+        if (index > -1) {
+            Vue.set(store.lobby, index, data);
+        }
 
-        viewData.lobby = Object.assign({}, viewData.lobby, newData);
-        updateView(viewData);
-
-        // console.log("Receive update lobby event... : " + JSON.stringify(app.viewData));
+        // console.log("Receive update lobby event... : " + JSON.stringify(data));
     });
 
     socket.on("remove-lobby", data => {
         let id = data.id;
+        let index = store.lobby.findIndex(element => id == element.id);
 
-        delete viewData.lobby[id];
-        viewData.total -= 1;
+        if (index > -1) {
+            Vue.delete(store.lobby, index);
+            store.total -= 1;
+        }
+        else {
+            console.log("Not found id : " + id);
+        }
 
-        updateView(viewData);
         // console.log("Receive delete lobby event... : " + JSON.stringify(data));
     });
 
@@ -102,9 +110,14 @@ function subscribe() {
     });
 }
 
-function updateView(data) {
-    viewData = data;
-    app.viewData = data;
+function updateStore(data) {
+    store.createDate = data.createDate;
+    store.total = data.total;
+
+    Object.keys(data.lobby).forEach((key) => {
+        let value = data.lobby[key];
+        store.lobby.push(value);
+    });
 }
 
 function isCacheMiss(current, expect) {

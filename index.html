@@ -1,36 +1,61 @@
 <!DOCTYPE html>
-<html>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<html lang="en">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <head>
-        <title>MyGameLobby</title>
+        <title>GameLobby</title>
+        <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.1/build/pure-min.css" integrity="sha384-oAOxQR6DkCoMliIh8yFnu25d7Eq/PHS21PClpwjOTeU2jRSq11vu66rf90/cZr47" crossorigin="anonymous">
         <link rel="stylesheet" type="text/css" href="css/theme.css">
         <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
-        <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.11/vue.js"></script> -->
         <script src="js/vue.min.js"></script>
         <script src="js/index.js"></script>
     </head>
     <body>
         <div id=app>
-            <div class="center">
-                <h1>{{ title }}</h1>
-                <!-- <h3>live at : {{ viewData.createDate }}</h3> -->
-                <h3>live at : {{ localeDate() }}</h3>
-                <h4>Total game : {{ viewData.total }}</h4>
+            <section class="wrapper">
+            <div class="text-center">
+                <header class="header">{{ title }}</header>
             </div>
-            <hr class="solid"></hr>
-            <div v-if="viewData.total > 0">
-                <ol>
-                    <li v-for="(item, index) in viewData.lobby">
-                        <div>
-                            <h4> {{ item.title }} </h4>
-                            <p>IP : {{ item.ip }}</p>
-                            <p>Port : {{ item.port }}</p>
-                            <p>Player : {{ item.player }} / {{ item.maxPlayer }}</p>
-                        </div>
-                    </li>
-                </ol>
+            <article class="container">
+            <div>
+            <table v-if="total > 0" class="pure-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>Address</th>
+                        <th>Port</th>
+                        <th>Player</th>
+                    </tr>
+                </thead>
+                <tbody v-for="(item, index) in lobby" :key="index">
+                    <tr>
+                        <td>{{ index + 1 }}</td>
+                        <td>{{ item.title }}</td>
+                        <td>{{ item.ip }}</td>
+                        <td>{{ item.port }}</td>
+                        <td>{{ item.player }} / {{ item.maxPlayer }}</td>
+                    </tr>
+                </tbody>
+            </table>
             </div>
+            <div v-if="total <= 0" class="container">
+                <div>
+                    <h4>No game available...</h4>
+                </div>
             </div>
-        </div>
+            </article>
+            </section>
+        <footer class="footer">
+            <div class="pure-g">
+                <div class="pure-u-1-2">
+                    <p class="text-left">live at : {{ localeDate() }}</p>
+                </div>
+                <div class="pure-u-1-2">
+                    <p class="text-right">available : {{ total }}</p>
+                </div>
+            </div>
+        </footer>
+    </div>
     </body>
 </html>
