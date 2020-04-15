@@ -33,6 +33,11 @@ const maxUIDLength = 32;
 const checkAliveInterval = 1000 * 60 * 2;
 
 let app = express();
+
+app.use(bodyParser.json({ strict: false }));
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(express.static("public"));
+
 let server = require("http").createServer(app);
 let io = require("socket.io")(server);
 let date = new Date();
@@ -44,10 +49,6 @@ let data = {
 };
 
 let token = {};
-
-app.use(bodyParser.json({ strict: false }));
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(express.static("public"));
 
 //------------------------------
 //  Request handler
@@ -154,8 +155,8 @@ function incorrectBodyParameterRespond(res) {
         detail: "Some parameter is missing, please send appropiate parameters",
         status: 400
     };
-    res.status(400);
     res.set("Content-Type", "application/problem+json");
+    res.status(400);
     res.send(JSON.stringify(error));
 }
 
@@ -299,12 +300,61 @@ app.put("/lobby", [body("id").exists(), body("token").exists()], (req, res) => {
             res.json(result);
         } else {
             forbiddenRespond(res);
+            return;
         }
     } catch (err) {
-        console.log(err);
         incorrectBodyParameterRespond(res);
     }
 });
+
+//update specific lobby's player info
+app.put("/lobby/player", [
+        body("id").exists(),
+        body("token").exists(),
+        body("player").exists(),
+        body("maxPlayer").exists()
+    ],
+    (req, res) => {
+        try {
+            validationResult(req).throw();
+
+            let id = req.body.id;
+            let isMatch = false;
+
+            try {
+                isMatch = isKeyMatch(id, req.body.token);
+
+                if (isMatch) {
+                    let info = {
+                        id: id
+                    };
+
+                    let player = req.body.player;
+                    let maxPlayer = req.body.maxPlayer;
+
+                    if (player != undefined)
+                        info.player = player;
+
+                    if (maxPlayer != undefined)
+                        info.maxPlayer = maxPlayer;
+
+                    updateLobby(info);
+
+                    res.status(204);
+                    res.end();
+                } else {
+                    forbiddenRespond(res);
+                }
+            } catch (err) {
+                lobbyNotFoundRespond(res);
+                return;
+            }
+        }
+        catch (err) {
+            incorrectBodyParameterRespond(res);
+        }
+    }
+);
 
 //delete specific lobby
 app.delete(

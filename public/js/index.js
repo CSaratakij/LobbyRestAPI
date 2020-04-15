@@ -48,7 +48,7 @@ function fetchGameLobby() {
                 return;
             }
             response.json().then(data => {
-                updateStore(data);
+                initializeView(data);
             });
         })
         .catch(err => {
@@ -57,6 +57,44 @@ function fetchGameLobby() {
 }
 
 function subscribe() {
+    socket.on("disconnect", (reason) => {
+        if (reason === "transport close") {
+            let alertConfig =  {
+                icon: 'error',
+                title: 'Offline',
+                text: 'Connection has been closed',
+                confirmButtonText: 'Refresh',
+                showLoaderOnConfirm: true,
+                allowOutsideClick: false,
+                preConfirm: () => {
+                    return fetch("/lobby")
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(response.statusText);
+                        }
+                        return response.json();
+                    })
+                    .catch(err => {
+                        Swal.showValidationMessage(
+                            'connection timeout...'
+                        )
+                    })
+                }
+            }
+
+            Swal.fire(alertConfig).then(result => {
+                if (result.value) {
+                    initializeView(result.value);
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Online',
+                        text: 'Reconnect successful',
+                    });
+                }
+            });
+        }
+    });
+
     socket.on("ping-respond", data => {
         if (!isDisconnectOnce) return;
         if (data.createDate == undefined) return;
@@ -69,6 +107,13 @@ function subscribe() {
         }
 
         isDisconnectOnce = false;
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Online',
+            text: 'Reconnect successful',
+        });
+
         // console.log("Receive ping respond event... : " + JSON.stringify(data));
     });
 
@@ -110,9 +155,10 @@ function subscribe() {
     });
 }
 
-function updateStore(data) {
+function initializeView(data) {
     store.createDate = data.createDate;
     store.total = data.total;
+    store.lobby.splice(0, store.lobby.length);
 
     Object.keys(data.lobby).forEach((key) => {
         let value = data.lobby[key];
