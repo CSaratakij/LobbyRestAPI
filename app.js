@@ -30,7 +30,7 @@ const ip = "0.0.0.0";
 const port = 8080;
 const maxUIDLength = 32;
 
-const checkAliveInterval = 1000 * 60 * 2;
+const checkAliveInterval = (1000 * 60) * 10;
 
 let app = express();
 
