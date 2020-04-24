@@ -1,19 +1,13 @@
 //------------------------------
 //  Initialize
 //------------------------------
-
 const _DEBUG = false;
 
 const express = require("express");
 const bodyParser = require("body-parser");
 const uid = require("uid");
 const mongoose = require("mongoose");
-const {
-    body,
-    query,
-    oneOf,
-    validationResult
-} = require("express-validator");
+const { body, query, oneOf, validationResult } = require("express-validator");
 
 const LobbyKeySchema = {
     title: "",
@@ -26,8 +20,7 @@ const LobbyKeySchema = {
     pingDate: ""
 };
 
-const ip = "0.0.0.0";
-const port = 8080;
+const PORT = 8080;
 const maxUIDLength = 32;
 
 const checkAliveInterval = (1000 * 60) * 10;
@@ -53,7 +46,6 @@ let token = {};
 //------------------------------
 //  Request handler
 //------------------------------
-
 function getLobbyList(id) {
     let isGetSpecificLobbyID = id == undefined || data.lobby[id] == undefined;
 
@@ -179,19 +171,17 @@ function isKeyMatch(id, key) {
     return false;
 }
 
-// app.get("/ip", (req, res) => {
-//     let result = {
-//         ip: req.ip
-//     }
-//     res.json(result);
-// });
-
+//TODO
+//disable -> move this to a website itself
+//and make that frontend page to subscript for keep-alive -> sse event on this lobby service end point
+//this is a full flesh api dude
 //serve homepage
 app.get("/", (req, res) => {
     res.sendFile(__dirname + "/index.html");
 });
 
 //ping specific lobby (keep entry of lobby from delete schedule)
+//TODO : need a token in query params to accept
 app.get("/lobby/ping", [query("id").exists()], (req, res) => {
     let id = req.query.id;
     if (data.lobby[id] == undefined) {
@@ -409,6 +399,9 @@ if (!_DEBUG) {
 //------------------------------
 //  Web socket handler
 //------------------------------
+//TODO
+//change this to SSE
+//give a subscribe endpoint to other app to listen
 io.on("connection", socket => {
     console.log("a user connected");
     socket.emit("ping-respond", { createDate: data.createDate });
@@ -422,6 +415,6 @@ io.on("connection", socket => {
     });
 });
 
-server.listen(port, ip, () => {
-    console.log("Server start at port : " + port);
+server.listen(process.env.PORT || PORT, () => {
+    console.log("Lobby Service has started...");
 });

@@ -57,6 +57,7 @@ function fetchGameLobby() {
 }
 
 function subscribe() {
+    //onerr -> keep alive
     socket.on("disconnect", (reason) => {
         if (reason === "transport close") {
             let alertConfig =  {
@@ -95,6 +96,7 @@ function subscribe() {
         }
     });
 
+    //SSE -> on open -> keep alive
     socket.on("ping-respond", data => {
         if (!isDisconnectOnce) return;
         if (data.createDate == undefined) return;
@@ -117,6 +119,7 @@ function subscribe() {
         // console.log("Receive ping respond event... : " + JSON.stringify(data));
     });
 
+    //SSE - > custom event (don't forget to addEventListener)
     socket.on("add-lobby", data => {
         store.lobby.push(data);
         store.total += 1;
@@ -124,6 +127,7 @@ function subscribe() {
         // console.log("Receive add lobby event... : " + JSON.stringify(data));
     });
 
+    //SSE - > custom event (don't forget to addEventListener)
     socket.on("update-lobby", data => {
         let id = data.id;
         let index = store.lobby.findIndex(element => id == element.id);
@@ -135,6 +139,7 @@ function subscribe() {
         // console.log("Receive update lobby event... : " + JSON.stringify(data));
     });
 
+    //SSE - > custom event (don't forget to addEventListener)
     socket.on("remove-lobby", data => {
         let id = data.id;
         let index = store.lobby.findIndex(element => id == element.id);
@@ -150,6 +155,7 @@ function subscribe() {
         // console.log("Receive delete lobby event... : " + JSON.stringify(data));
     });
 
+    //sse -> onerr -> ?
     socket.on("disconnect", () => {
         isDisconnectOnce = true;
     });
