@@ -3,6 +3,8 @@
 //------------------------------
 const _DEBUG = false;
 
+const cors = require("cors");
+const EventEmitter = require('eventemitter3');
 const express = require("express");
 const bodyParser = require("body-parser");
 const uid = require("uid");
@@ -25,14 +27,13 @@ const maxUIDLength = 32;
 
 const checkAliveInterval = (1000 * 60) * 10;
 
+let emitter = new EventEmitter();
 let app = express();
 
+app.use(cors());
 app.use(bodyParser.json({ strict: false }));
 app.use(bodyParser.urlencoded({ extended: false }));
-app.use(express.static("public"));
 
-let server = require("http").createServer(app);
-let io = require("socket.io")(server);
 let date = new Date();
 
 let data = {
@@ -76,7 +77,9 @@ function addLobby(info) {
     // console.log(info);
     // console.log("secret : " + token[id]);
 
-    io.emit("add-lobby", info);
+    info.event = "add-lobby";
+    emitter.emit("message", info);
+
     return info.id;
 }
 
@@ -98,7 +101,10 @@ function updateLobby(info) {
         lobby: data.lobby[id]
     };
 
-    io.emit("update-lobby", data.lobby[id]);
+    let response = Object.assign({}, data.lobby[id])
+    response.event = "update-lobby";
+
+    emitter.emit("message", response);
     return result;
 }
 
@@ -110,7 +116,13 @@ function removeLobby(id) {
     if (temp < 0) temp = 0;
 
     data.total = temp;
-    io.emit("remove-lobby", { id: id });
+
+    let info = {
+        event: "remove-lobby",
+        id: id
+    }
+
+    emitter.emit("message", info);
 }
 
 function lobbyNotFoundRespond(res) {
@@ -171,26 +183,44 @@ function isKeyMatch(id, key) {
     return false;
 }
 
-//TODO
-//disable -> move this to a website itself
-//and make that frontend page to subscript for keep-alive -> sse event on this lobby service end point
-//this is a full flesh api dude
-//serve homepage
-app.get("/", (req, res) => {
-    res.sendFile(__dirname + "/index.html");
+//SSE : subscribe endpoint
+app.get("/subscribe", (req, res) => {
+    res.writeHead(200, {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive"
+    });
+
+    const onOpen = () => {
+        res.write(`event: open\ndata: ${JSON.stringify({ createDate: data.createDate })}\n\n`);
+    }
+
+    const onMessage = input => {
+        res.write(`data: ${JSON.stringify(input)}\n\n`);
+    }
+
+    emitter.on("open", onOpen);
+    emitter.on("message", onMessage);
+    emitter.on("error", onMessage);
+
+    req.on("close", () => {
+        emitter.removeListener("open", onOpen)
+        emitter.removeListener("message", onMessage)
+        emitter.removeListener("error", onMessage)
+        res.end();
+    });
+
+    emitter.emit("open");
 });
 
-//ping specific lobby (keep entry of lobby from delete schedule)
-//TODO : need a token in query params to accept
-app.get("/lobby/ping", [query("id").exists()], (req, res) => {
+app.get("/lobby/ping", [query("id").exists(), query("token").exists()], (req, res) => {
     let id = req.query.id;
     if (data.lobby[id] == undefined) {
         lobbyNotFoundRespond(res);
     } else {
         let date = new Date();
         data.lobby[id].pingDate = date.toISOString();
-        res.status(204);
-        res.end();
+        res.status(204).send();
     }
 });
 
@@ -252,8 +282,7 @@ app.post(
                 id: id,
                 token: token[id]
             };
-            res.status(201);
-            res.json(result);
+            res.status(201).json(result);
         } catch (err) {
             incorrectBodyParameterRespond(res);
         }
@@ -329,9 +358,7 @@ app.put("/lobby/player", [
                         info.maxPlayer = maxPlayer;
 
                     updateLobby(info);
-
-                    res.status(204);
-                    res.end();
+                    res.status(204).send();
                 } else {
                     forbiddenRespond(res);
                 }
@@ -366,8 +393,7 @@ app.delete(
 
             if (isMatch) {
                 removeLobby(id);
-                res.status(204);
-                res.end();
+                res.status(204).send();
             } else {
                 forbiddenRespond(res);
             }
@@ -380,7 +406,6 @@ app.delete(
 //------------------------------
 //  Server
 //------------------------------
-
 //set timer to check if we should drop specific lobby entry
 if (!_DEBUG) {
     setInterval(() => {
@@ -396,25 +421,6 @@ if (!_DEBUG) {
     }, checkAliveInterval);
 }
 
-//------------------------------
-//  Web socket handler
-//------------------------------
-//TODO
-//change this to SSE
-//give a subscribe endpoint to other app to listen
-io.on("connection", socket => {
-    console.log("a user connected");
-    socket.emit("ping-respond", { createDate: data.createDate });
-
-    socket.on("ping", () => {
-        socket.emit("ping-respond", { createDate: data.createDate });
-    });
-
-    socket.on("disconnect", () => {
-        socket.disconnect();
-    });
-});
-
-server.listen(process.env.PORT || PORT, () => {
+app.listen(process.env.PORT || PORT, () => {
     console.log("Lobby Service has started...");
 });
