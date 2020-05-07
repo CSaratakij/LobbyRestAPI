@@ -131,9 +131,9 @@ function lobbyNotFoundRespond(res) {
         type: "",
         title: "Lobby not found",
         detail: "There is no lobby with request lobby id",
-        status: 404
+        status: 409
     };
-    res.status(404);
+    res.status(409);
     res.set("Content-Type", "application/problem+json");
     res.send(JSON.stringify(error));
 }
